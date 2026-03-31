@@ -200,6 +200,15 @@ const medicalDatabase = {
   ],
 };
 
+const INFERMEDICA_CONFIG = {
+  appId: "",
+  appKey: "",
+  baseUrl: "https://api.infermedica.com/v3",
+  model: "infermedica-en",
+  defaultSex: "male",
+  defaultAge: 30,
+};
+
 const selectedSymptoms = new Set();
 let recognition = null;
 let voiceSupported = false;
@@ -269,6 +278,100 @@ function calculateMatches() {
     .sort((a, b) => b.percentage - a.percentage);
 }
 
+function calculateLocalMatches() {
+  return calculateMatches();
+}
+
+function hasInfermedicaCredentials() {
+  return Boolean(INFERMEDICA_CONFIG.appId && INFERMEDICA_CONFIG.appKey);
+}
+
+async function infermedicaRequest(path, payload) {
+  const response = await fetch(`${INFERMEDICA_CONFIG.baseUrl}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "App-Id": INFERMEDICA_CONFIG.appId,
+      "App-Key": INFERMEDICA_CONFIG.appKey,
+      "Model": INFERMEDICA_CONFIG.model,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Infermedica API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
+async function calculateInfermedicaMatches() {
+  const selected = Array.from(selectedSymptoms);
+  const parseText = selected.join(", ");
+  const parsePayload = {
+    text: parseText,
+    age: { value: INFERMEDICA_CONFIG.defaultAge },
+    sex: INFERMEDICA_CONFIG.defaultSex,
+  };
+
+  const parseData = await infermedicaRequest("/parse", parsePayload);
+  const evidence = (parseData.mentions || []).map((mention) => ({
+    id: mention.id,
+    choice_id: mention.choice_id || "present",
+  }));
+
+  if (!evidence.length) {
+    return [];
+  }
+
+  const diagnosisPayload = {
+    sex: INFERMEDICA_CONFIG.defaultSex,
+    age: { value: INFERMEDICA_CONFIG.defaultAge },
+    evidence,
+  };
+
+  const diagnosisData = await infermedicaRequest("/diagnosis", diagnosisPayload);
+  const conditions = diagnosisData.conditions || [];
+
+  return conditions.map((condition, index) => {
+    const matched = selected;
+    const percentage = Math.round((condition.probability || 0) * 100);
+    const local = medicalDatabase.diagnoses.find((d) => d.name === condition.name);
+    return {
+      id: local ? local.id : `infermedica-${index}`,
+      externalId: condition.id,
+      name: condition.name,
+      percentage,
+      matched,
+      hasLocalDetails: Boolean(local),
+    };
+  });
+}
+
+async function getDiagnosisMatches() {
+  if (!hasInfermedicaCredentials()) {
+    voiceStatus.textContent =
+      "Infermedica API credentials missing. Using local diagnosis engine.";
+    return calculateLocalMatches();
+  }
+
+  try {
+    voiceStatus.textContent = "Analyzing with Infermedica API...";
+    const infermedicaMatches = await calculateInfermedicaMatches();
+    voiceStatus.textContent = "";
+
+    if (!infermedicaMatches.length) {
+      voiceStatus.textContent = "No Infermedica conditions matched. Showing local results.";
+      return calculateLocalMatches();
+    }
+    return infermedicaMatches.sort((a, b) => b.percentage - a.percentage);
+  } catch (error) {
+    voiceStatus.textContent = "Infermedica unavailable. Falling back to local diagnosis.";
+    return calculateLocalMatches();
+  }
+}
+
 function renderResults(results) {
   resultsContainer.innerHTML = "";
   if (!results.length) {
@@ -278,22 +381,32 @@ function renderResults(results) {
   }
 
   results.forEach((item) => {
+    const matchedSymptomNames = item.matched
+      .map((m) => (medicalDatabase.symptoms[m] ? medicalDatabase.symptoms[m].name : m))
+      .join(", ");
+    const canShowDetail = Number.isInteger(item.id);
+    const detailButton = canShowDetail
+      ? `<button class="btn" data-id="${item.id}">View Details</button>`
+      : `<button class="btn" disabled title="Detailed local medicine data not available for this API condition">No Local Details</button>`;
+
     const wrap = document.createElement("article");
     wrap.className = "result-item";
     wrap.innerHTML = `
       <div class="result-main">
         <h4>${item.name}</h4>
-        <p class="muted">Matched symptoms: ${item.matched.map((m) => medicalDatabase.symptoms[m].name).join(", ")}</p>
+        <p class="muted">Matched symptoms: ${matchedSymptomNames || "Not available"}</p>
       </div>
       <div>
         <span class="pill" style="background:#0f766e">${item.percentage}% match</span>
-        <button class="btn" data-id="${item.id}">View Details</button>
+        ${detailButton}
       </div>
     `;
 
-    wrap.querySelector("button").addEventListener("click", () => {
-      showDetails(item.id);
-    });
+    if (canShowDetail) {
+      wrap.querySelector("button").addEventListener("click", () => {
+        showDetails(item.id);
+      });
+    }
     resultsContainer.appendChild(wrap);
   });
 }
@@ -380,12 +493,12 @@ voiceBtn.addEventListener("click", () => {
   recognition.start();
 });
 
-analyzeBtn.addEventListener("click", () => {
+analyzeBtn.addEventListener("click", async () => {
   if (!selectedSymptoms.size) {
     voiceStatus.textContent = "Add at least one symptom before analysis.";
     return;
   }
-  const matches = calculateMatches();
+  const matches = await getDiagnosisMatches();
   renderResults(matches);
   resultsSection.classList.remove("hidden");
   detailSection.classList.add("hidden");
