@@ -8,18 +8,25 @@
   </head>
   <body>
     <header class="hero">
-      <div class="container">
+      <div class="hero-glow hero-glow-one"></div>
+      <div class="hero-glow hero-glow-two"></div>
+      <div class="container hero-content">
         <h1>MediCare AI</h1>
         <p>
           Educational symptom checker with medicine insights across Allopathic,
           Ayurvedic, and Homeopathic systems.
         </p>
+        <div class="hero-badges">
+          <span>Voice-Enabled</span>
+          <span>AI-Powered</span>
+          <span>Privacy First</span>
+        </div>
         <button id="startBtn" class="btn btn-primary">Start Health Checkup</button>
       </div>
     </header>
 
     <main class="container">
-      <section id="checker" class="card hidden">
+      <section id="checker" class="card hidden reveal-on-scroll">
         <h2>Symptom Checker</h2>
         <p class="muted">
           Add symptoms by voice or text. This tool is educational only and not a
@@ -59,17 +66,17 @@
         <button id="analyzeBtn" class="btn btn-primary">Analyze Symptoms</button>
       </section>
 
-      <section id="resultsSection" class="card hidden">
+      <section id="resultsSection" class="card hidden reveal-on-scroll">
         <h2>Possible Conditions</h2>
         <div id="results"></div>
       </section>
 
-      <section id="detailSection" class="card hidden">
+      <section id="detailSection" class="card hidden reveal-on-scroll">
         <h2 id="detailTitle">Condition Detail</h2>
         <div id="detailContent"></div>
       </section>
 
-      <section class="card disclaimer">
+      <section class="card disclaimer reveal-on-scroll">
         <h3>Important Disclaimer</h3>
         <p>
           MediCare AI provides educational health information only. It does not
