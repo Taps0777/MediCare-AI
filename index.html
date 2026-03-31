@@ -30,12 +30,28 @@
           <input
             id="symptomInput"
             type="text"
+            list="symptomSuggestions"
             placeholder="Type symptom (e.g., fever, cough)"
             aria-label="Symptom input"
           />
           <button id="addSymptomBtn" class="btn">Add</button>
           <button id="voiceBtn" class="btn btn-voice">Voice</button>
         </div>
+        <datalist id="symptomSuggestions"></datalist>
+
+        <div class="input-row disease-row">
+          <input
+            id="diseaseInput"
+            type="text"
+            list="diseaseSuggestions"
+            placeholder="Optional: Type disease name to focus results"
+            aria-label="Disease input"
+          />
+          <button id="selectDiseaseBtn" class="btn">Select Disease</button>
+          <button id="clearDiseaseBtn" class="btn">Clear</button>
+        </div>
+        <datalist id="diseaseSuggestions"></datalist>
+        <p id="diseaseStatus" class="muted" aria-live="polite"></p>
         <p id="voiceStatus" class="muted" aria-live="polite"></p>
 
         <div id="selectedSymptoms" class="chips"></div>

@@ -212,13 +212,21 @@ const INFERMEDICA_CONFIG = {
 const selectedSymptoms = new Set();
 let recognition = null;
 let voiceSupported = false;
+let selectedDiseaseFilter = "";
+const infermedicaSymptomsByName = new Map();
 
 const checker = document.getElementById("checker");
 const startBtn = document.getElementById("startBtn");
 const symptomInput = document.getElementById("symptomInput");
+const symptomSuggestions = document.getElementById("symptomSuggestions");
 const addSymptomBtn = document.getElementById("addSymptomBtn");
 const voiceBtn = document.getElementById("voiceBtn");
 const voiceStatus = document.getElementById("voiceStatus");
+const diseaseInput = document.getElementById("diseaseInput");
+const diseaseSuggestions = document.getElementById("diseaseSuggestions");
+const selectDiseaseBtn = document.getElementById("selectDiseaseBtn");
+const clearDiseaseBtn = document.getElementById("clearDiseaseBtn");
+const diseaseStatus = document.getElementById("diseaseStatus");
 const symptomsContainer = document.getElementById("selectedSymptoms");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const resultsSection = document.getElementById("resultsSection");
@@ -235,6 +243,31 @@ const medicineColors = {
   Natural: "#06b6d4",
 };
 
+function getAllDiseaseNames() {
+  const localNames = medicalDatabase.diagnoses.map((d) => d.name);
+  return Array.from(new Set(localNames)).sort((a, b) => a.localeCompare(b));
+}
+
+function populateSuggestionLists() {
+  symptomSuggestions.innerHTML = "";
+  const symptomSource = infermedicaSymptomsByName.size
+    ? Array.from(infermedicaSymptomsByName.values())
+    : Object.values(medicalDatabase.symptoms);
+
+  symptomSource.forEach((symptom) => {
+    const option = document.createElement("option");
+    option.value = symptom.name;
+    symptomSuggestions.appendChild(option);
+  });
+
+  diseaseSuggestions.innerHTML = "";
+  getAllDiseaseNames().forEach((diseaseName) => {
+    const option = document.createElement("option");
+    option.value = diseaseName;
+    diseaseSuggestions.appendChild(option);
+  });
+}
+
 function normalizeSymptom(symptom) {
   return symptom.trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -242,10 +275,12 @@ function normalizeSymptom(symptom) {
 function renderSelectedSymptoms() {
   symptomsContainer.innerHTML = "";
   selectedSymptoms.forEach((key) => {
-    const symptom = medicalDatabase.symptoms[key];
+    const symptom =
+      infermedicaSymptomsByName.get(key) ||
+      medicalDatabase.symptoms[key] || { name: key, color: "#0ea5e9" };
     const chip = document.createElement("div");
     chip.className = "chip";
-    chip.style.background = symptom.color;
+    chip.style.background = symptom.color || "#0ea5e9";
     chip.innerHTML = `<span>${symptom.name}</span><button aria-label="Remove ${symptom.name}">&times;</button>`;
     chip.querySelector("button").addEventListener("click", () => {
       selectedSymptoms.delete(key);
@@ -257,7 +292,9 @@ function renderSelectedSymptoms() {
 
 function addSymptom(rawSymptom) {
   const key = normalizeSymptom(rawSymptom);
-  if (!medicalDatabase.symptoms[key]) {
+  const infermedicaMatch = infermedicaSymptomsByName.get(key);
+  const localMatch = medicalDatabase.symptoms[key];
+  if (!infermedicaMatch && !localMatch) {
     voiceStatus.textContent = "Symptom not recognized. Use one from the supported list.";
     return;
   }
@@ -265,6 +302,26 @@ function addSymptom(rawSymptom) {
   symptomInput.value = "";
   voiceStatus.textContent = "";
   renderSelectedSymptoms();
+}
+
+function setDiseaseFilter(rawDisease) {
+  const disease = rawDisease.trim().toLowerCase();
+  if (!disease) {
+    selectedDiseaseFilter = "";
+    diseaseStatus.textContent = "";
+    return;
+  }
+
+  const availableNames = getAllDiseaseNames();
+  const exactMatch = availableNames.find((name) => name.toLowerCase() === disease);
+  if (!exactMatch) {
+    diseaseStatus.textContent = "Disease not found in suggestions. Pick a listed disease.";
+    return;
+  }
+
+  selectedDiseaseFilter = exactMatch;
+  diseaseInput.value = exactMatch;
+  diseaseStatus.textContent = `Results will focus on: ${exactMatch}`;
 }
 
 function calculateMatches() {
@@ -287,15 +344,16 @@ function hasInfermedicaCredentials() {
 }
 
 async function infermedicaRequest(path, payload) {
+  const hasBody = typeof payload !== "undefined";
   const response = await fetch(`${INFERMEDICA_CONFIG.baseUrl}${path}`, {
-    method: "POST",
+    method: hasBody ? "POST" : "GET",
     headers: {
       "Content-Type": "application/json",
       "App-Id": INFERMEDICA_CONFIG.appId,
       "App-Key": INFERMEDICA_CONFIG.appKey,
       "Model": INFERMEDICA_CONFIG.model,
     },
-    body: JSON.stringify(payload),
+    body: hasBody ? JSON.stringify(payload) : undefined,
   });
 
   if (!response.ok) {
@@ -304,6 +362,35 @@ async function infermedicaRequest(path, payload) {
   }
 
   return response.json();
+}
+
+async function loadInfermedicaSymptoms() {
+  if (!hasInfermedicaCredentials()) {
+    populateSuggestionLists();
+    return;
+  }
+
+  try {
+    voiceStatus.textContent = "Loading symptoms from Infermedica...";
+    const symptoms = await infermedicaRequest("/symptoms");
+    infermedicaSymptomsByName.clear();
+
+    (symptoms || []).forEach((symptom) => {
+      if (!symptom.name) return;
+      infermedicaSymptomsByName.set(normalizeSymptom(symptom.name), {
+        id: symptom.id,
+        name: symptom.name,
+        color: "#0ea5e9",
+      });
+    });
+
+    populateSuggestionLists();
+    voiceStatus.textContent = "Symptoms loaded from Infermedica API.";
+  } catch (error) {
+    populateSuggestionLists();
+    voiceStatus.textContent =
+      "Could not load Infermedica symptoms. Using local symptom list.";
+  }
 }
 
 async function calculateInfermedicaMatches() {
@@ -374,15 +461,24 @@ async function getDiagnosisMatches() {
 
 function renderResults(results) {
   resultsContainer.innerHTML = "";
-  if (!results.length) {
+  const filteredResults = selectedDiseaseFilter
+    ? results.filter((item) => item.name.toLowerCase() === selectedDiseaseFilter.toLowerCase())
+    : results;
+  if (!filteredResults.length) {
     resultsContainer.innerHTML =
-      "<p class='muted'>No likely match found. Try adding more exact symptoms.</p>";
+      selectedDiseaseFilter
+        ? "<p class='muted'>No match found for the selected disease with current symptoms.</p>"
+        : "<p class='muted'>No likely match found. Try adding more exact symptoms.</p>";
     return;
   }
 
-  results.forEach((item) => {
+  filteredResults.forEach((item) => {
     const matchedSymptomNames = item.matched
-      .map((m) => (medicalDatabase.symptoms[m] ? medicalDatabase.symptoms[m].name : m))
+      .map((m) => {
+        if (infermedicaSymptomsByName.has(m)) return infermedicaSymptomsByName.get(m).name;
+        if (medicalDatabase.symptoms[m]) return medicalDatabase.symptoms[m].name;
+        return m;
+      })
       .join(", ");
     const canShowDetail = Number.isInteger(item.id);
     const detailButton = canShowDetail
@@ -433,7 +529,11 @@ function showDetails(id) {
 
   detailContent.innerHTML = `
     <p><strong>Typical Symptoms:</strong> ${diagnosis.symptoms
-      .map((s) => medicalDatabase.symptoms[s].name)
+      .map((s) => {
+        if (infermedicaSymptomsByName.has(s)) return infermedicaSymptomsByName.get(s).name;
+        if (medicalDatabase.symptoms[s]) return medicalDatabase.symptoms[s].name;
+        return s;
+      })
       .join(", ")}</p>
     <h3>Precautions</h3>
     <ul>${precautionsHtml}</ul>
@@ -487,6 +587,15 @@ addSymptomBtn.addEventListener("click", () => addSymptom(symptomInput.value));
 symptomInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") addSymptom(symptomInput.value);
 });
+selectDiseaseBtn.addEventListener("click", () => setDiseaseFilter(diseaseInput.value));
+diseaseInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") setDiseaseFilter(diseaseInput.value);
+});
+clearDiseaseBtn.addEventListener("click", () => {
+  selectedDiseaseFilter = "";
+  diseaseInput.value = "";
+  diseaseStatus.textContent = "Disease filter cleared.";
+});
 
 voiceBtn.addEventListener("click", () => {
   if (!voiceSupported || !recognition) return;
@@ -505,4 +614,5 @@ analyzeBtn.addEventListener("click", async () => {
   resultsSection.scrollIntoView({ behavior: "smooth" });
 });
 
+loadInfermedicaSymptoms();
 initVoice();
