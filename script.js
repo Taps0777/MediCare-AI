@@ -234,6 +234,19 @@ const resultsContainer = document.getElementById("results");
 const detailSection = document.getElementById("detailSection");
 const detailTitle = document.getElementById("detailTitle");
 const detailContent = document.getElementById("detailContent");
+const orderSection = document.getElementById("orderSection");
+const orderForm = document.getElementById("orderForm");
+const orderDisease = document.getElementById("orderDisease");
+const orderMedicine = document.getElementById("orderMedicine");
+const customerName = document.getElementById("customerName");
+const customerPhone = document.getElementById("customerPhone");
+const orderQuantity = document.getElementById("orderQuantity");
+const customerCity = document.getElementById("customerCity");
+const customerAddress = document.getElementById("customerAddress");
+const orderNotes = document.getElementById("orderNotes");
+const cancelOrderBtn = document.getElementById("cancelOrderBtn");
+
+const ORDER_WHATSAPP_NUMBER = "919414055572";
 
 const medicineColors = {
   Allopathic: "#3b82f6",
@@ -522,6 +535,11 @@ function showDetails(id) {
           <p><strong>Dose:</strong> ${m.dose}</p>
           <p><strong>Duration:</strong> ${m.duration}</p>
           <p><strong>Side Effects:</strong> ${m.sideEffects}</p>
+          <div class="medicine-actions">
+            <button class="btn btn-buy buy-medicine-btn" data-medicine="${m.name}" data-disease="${diagnosis.name}">
+              Buy on WhatsApp
+            </button>
+          </div>
         </article>
       `;
     })
@@ -541,6 +559,37 @@ function showDetails(id) {
     <div class="medicine-list">${medicineHtml}</div>
   `;
   detailSection.classList.remove("hidden");
+
+  detailContent.querySelectorAll(".buy-medicine-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      openOrderLanding(button.dataset.medicine, button.dataset.disease);
+    });
+  });
+}
+
+function openOrderLanding(medicineName, diseaseName) {
+  orderMedicine.value = medicineName || "";
+  orderDisease.value = diseaseName || "";
+  orderSection.classList.remove("hidden");
+  orderSection.classList.add("in-view");
+  orderSection.scrollIntoView({ behavior: "smooth" });
+}
+
+function buildWhatsAppOrderMessage() {
+  return [
+    "Hello, I would like to place a medicine order.",
+    "",
+    `Disease: ${orderDisease.value}`,
+    `Medicine: ${orderMedicine.value}`,
+    `Quantity: ${orderQuantity.value}`,
+    "",
+    "Customer Details:",
+    `Name: ${customerName.value}`,
+    `Phone: ${customerPhone.value}`,
+    `City: ${customerCity.value}`,
+    `Address: ${customerAddress.value}`,
+    `Notes: ${orderNotes.value || "N/A"}`,
+  ].join("\n");
 }
 
 function initVoice() {
@@ -640,6 +689,17 @@ clearDiseaseBtn.addEventListener("click", () => {
   selectedDiseaseFilter = "";
   diseaseInput.value = "";
   diseaseStatus.textContent = "Disease filter cleared.";
+});
+
+orderForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const message = buildWhatsAppOrderMessage();
+  const whatsappUrl = `https://wa.me/${ORDER_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  window.open(whatsappUrl, "_blank");
+});
+
+cancelOrderBtn.addEventListener("click", () => {
+  orderSection.classList.add("hidden");
 });
 
 voiceBtn.addEventListener("click", () => {

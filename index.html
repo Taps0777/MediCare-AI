@@ -76,6 +76,42 @@
         <div id="detailContent"></div>
       </section>
 
+      <section id="orderSection" class="card hidden reveal-on-scroll">
+        <h2>Order Medicine</h2>
+        <p class="muted">
+          Fill your details and place your order directly on WhatsApp.
+        </p>
+        <form id="orderForm" class="order-form">
+          <div class="form-grid">
+            <input id="orderDisease" type="text" placeholder="Disease" readonly />
+            <input id="orderMedicine" type="text" placeholder="Medicine" readonly />
+          </div>
+          <div class="form-grid">
+            <input id="customerName" type="text" placeholder="Full Name" required />
+            <input id="customerPhone" type="text" placeholder="Phone Number" required />
+          </div>
+          <div class="form-grid">
+            <input id="orderQuantity" type="number" min="1" value="1" required />
+            <input id="customerCity" type="text" placeholder="City" required />
+          </div>
+          <textarea
+            id="customerAddress"
+            placeholder="Full Address"
+            rows="3"
+            required
+          ></textarea>
+          <textarea
+            id="orderNotes"
+            placeholder="Extra Notes (optional)"
+            rows="2"
+          ></textarea>
+          <div class="order-actions">
+            <button type="submit" class="btn btn-primary">Place Order on WhatsApp</button>
+            <button type="button" id="cancelOrderBtn" class="btn">Cancel</button>
+          </div>
+        </form>
+      </section>
+
       <section class="card disclaimer reveal-on-scroll">
         <h3>Important Disclaimer</h3>
         <p>

@@ -255,6 +255,52 @@ input[type="text"]:focus {
   margin: 0 0 6px;
 }
 
+.medicine-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-buy {
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  color: #fff;
+  box-shadow: 0 8px 16px rgba(22, 163, 74, 0.2);
+}
+
+.order-form {
+  display: grid;
+  gap: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.order-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .footer {
   padding: 22px 0 34px;
   color: var(--muted);
@@ -300,5 +346,9 @@ input[type="text"]:focus {
   .card {
     padding: 16px;
     border-radius: 14px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }
