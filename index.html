@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediCare AI - Intelligent Medical Support</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="container">
+        <h1>MediCare AI</h1>
+        <p>
+          Educational symptom checker with medicine insights across Allopathic,
+          Ayurvedic, and Homeopathic systems.
+        </p>
+        <button id="startBtn" class="btn btn-primary">Start Health Checkup</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section id="checker" class="card hidden">
+        <h2>Symptom Checker</h2>
+        <p class="muted">
+          Add symptoms by voice or text. This tool is educational only and not a
+          medical diagnosis.
+        </p>
+
+        <div class="input-row">
+          <input
+            id="symptomInput"
+            type="text"
+            placeholder="Type symptom (e.g., fever, cough)"
+            aria-label="Symptom input"
+          />
+          <button id="addSymptomBtn" class="btn">Add</button>
+          <button id="voiceBtn" class="btn btn-voice">Voice</button>
+        </div>
+        <p id="voiceStatus" class="muted" aria-live="polite"></p>
+
+        <div id="selectedSymptoms" class="chips"></div>
+
+        <button id="analyzeBtn" class="btn btn-primary">Analyze Symptoms</button>
+      </section>
+
+      <section id="resultsSection" class="card hidden">
+        <h2>Possible Conditions</h2>
+        <div id="results"></div>
+      </section>
+
+      <section id="detailSection" class="card hidden">
+        <h2 id="detailTitle">Condition Detail</h2>
+        <div id="detailContent"></div>
+      </section>
+
+      <section class="card disclaimer">
+        <h3>Important Disclaimer</h3>
+        <p>
+          MediCare AI provides educational health information only. It does not
+          replace professional medical advice, diagnosis, or treatment.
+        </p>
+        <p>
+          Seek emergency help immediately for severe chest pain, breathing
+          difficulty, unconsciousness, severe bleeding, or serious allergic
+          reactions.
+        </p>
+      </section>
+    </main>
+
+    <footer class="container footer">
+      <p>Version 1.0.0 | Built for health awareness and responsible use.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
